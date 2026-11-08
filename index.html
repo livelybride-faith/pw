@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lyrics Pinyin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Serif+SC:wght@400;700&family=Noto+Serif:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #eeeeea;
+  --panel: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #5f5f5b;
+  --border: #c9c9c4;
+  --accent: #2a5db0;
+  --field: #ffffff;
+  --field-fg: #1a1a1a;
+  --status: #333333;
+  --danger: #b00020;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17181a;
+    --panel: #222427;
+    --fg: #e8e8e6;
+    --muted: #a3a3a0;
+    --border: #3a3d42;
+    --accent: #7fa8ff;
+    --field: #15161a;
+    --field-fg: #eeeeee;
+    --status: #cfcfcc;
+    --danger: #ff8a8a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17181a;
+  --panel: #222427;
+  --fg: #e8e8e6;
+  --muted: #a3a3a0;
+  --border: #3a3d42;
+  --accent: #7fa8ff;
+  --field: #15161a;
+  --field-fg: #eeeeee;
+  --status: #cfcfcc;
+  --danger: #ff8a8a;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font: 15px/1.4 system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  padding: 16px;
+  overflow-x: hidden;
+}
+.app {
+  display: grid;
+  gap: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 900px) {
+  .app { grid-template-columns: 340px minmax(0, 1fr); align-items: start; }
+}
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  min-width: 0;
+}
+label { display: block; font-weight: 600; margin: 10px 0 4px; }
+label.check { display: flex; gap: 6px; align-items: center; font-weight: 400; }
+.hint { color: var(--muted); font-size: 13px; margin: 4px 0 0; }
+input[type="text"], input[type="number"], select, textarea {
+  width: 100%;
+  font: inherit;
+  background: var(--field);
+  color: var(--field-fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 8px;
+}
+input[type="checkbox"] { margin: 0; }
+textarea { resize: vertical; }
+.lyrics { min-height: 220px; font-family: "Noto Serif TC", "Noto Serif SC", serif; }
+.inline { display: flex; gap: 6px; align-items: center; }
+.inline input { flex: 1; min-width: 0; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+button {
+  font: inherit;
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+button:disabled { opacity: 0.5; cursor: default; }
+button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--border); }
+.save { margin-top: 14px; display: grid; gap: 8px; }
+.save #save { width: 100%; font-weight: 600; }
+#folderRow { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+details { margin-top: 12px; }
+details summary { cursor: pointer; font-weight: 600; }
+#status { color: var(--status); min-height: 1.4em; margin: 0 0 6px; }
+#status.err { color: var(--danger); }
+.preview { min-width: 0; }
+
+/* Paper preview: always white paper, black text */
+#pages { --pw: 793.7px; --ph: 1122.5px; --s: 1; }
+.pwrap {
+  position: relative;
+  overflow: hidden;
+  margin: 0 auto 16px;
+  width: calc(var(--pw) * var(--s));
+  height: calc(var(--ph) * var(--s));
+}
+.page {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--pw);
+  height: var(--ph);
+  background: #fff;
+  color: #000;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  transform: scale(var(--s));
+  transform-origin: 0 0;
+  font-family: "Noto Serif TC", "Noto Serif SC", "Songti TC", "Songti SC", serif;
+  overflow: hidden;
+}
+.content { font-size: 40px; line-height: 1.25; }
+.title { font-weight: 700; margin: 0 0 0.8em; }
+.block + .block { margin-top: 0.6em; }
+.label { font-weight: 700; font-family: "Times New Roman", Times, "Noto Serif", serif; }
+.rest { display: flex; column-gap: 1.2em; align-items: start; }
+.tpy { font-family: "Times New Roman", Times, "Noto Serif", serif; }
+.row { display: flex; align-items: start; white-space: nowrap; }
+.row + .row, .label + .row { margin-top: 0.45em; }
+.row.gap { margin-top: 0.6em; }
+.cell { min-width: 0; white-space: nowrap; display: flex; align-items: start; }
+.zh { line-height: 1.25; }
+.py {
+  display: block;
+  font-family: "Times New Roman", Times, "Noto Serif", serif;
+  font-size: calc(var(--ratio, 1) * 1em);
+  line-height: 1.2;
+  cursor: text;
+}
+.py:focus { outline: 1px dashed var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main class="app">
+  <aside class="panel" aria-label="Controls">
+    <label for="title">Title (Chinese)</label>
+    <input type="text" id="title" maxlength="200" placeholder="e.g. 我們一起走" autocomplete="off">
+
+    <label for="titlePy">Title pinyin</label>
+    <div class="inline">
+      <input type="text" id="titlePy" maxlength="400" autocomplete="off">
+      <button type="button" class="secondary" id="resetPy" title="Reset title pinyin to automatic">↺</button>
+    </div>
+
+    <label for="lyrics">Lyrics</label>
+    <textarea id="lyrics" class="lyrics" rows="12" maxlength="20000" placeholder="[主歌]&#10;我們 一起走 在路上&#10;長大以後  去銀行&#10;&#10;[副歌]&#10;祢的愛  永遠長存"></textarea>
+    <p class="hint">One line per lyric line. Use a tab, <code>|</code> or 2+ spaces between cells. <code>[Verse]</code>, <code>[Chorus]</code> and similar start a section. Lines that already have pinyin are skipped.</p>
+
+    <div class="save">
+      <button type="button" id="save">Save PDF</button>
+      <div id="folderRow" hidden>
+        <span id="folderLine"></span>
+        <button type="button" class="secondary" id="changeFolder" hidden>Change folder</button>
+      </div>
+    </div>
+
+    <details>
+      <summary>Settings</summary>
+      <label for="paper">Paper</label>
+      <select id="paper">
+        <option value="a4">A4</option>
+        <option value="letter">Letter</option>
+      </select>
+      <div class="row2">
+        <div><label for="margin">Margin (mm)</label><input type="number" id="margin" min="5" max="40" step="1" value="22"></div>
+        <div><label for="ratio">Pinyin size ratio</label><input type="number" id="ratio" min="0.5" max="1.5" step="0.05" value="1"></div>
+        <div><label for="maxPx">Max font (px)</label><input type="number" id="maxPx" min="6" max="200" step="1" value="40"></div>
+        <div><label for="minPx">Min font (px)</label><input type="number" id="minPx" min="6" max="200" step="1" value="12"></div>
+      </div>
+      <label class="check" hidden><input type="checkbox" id="autoSplit" checked> Auto-split lines at a space or comma</label>
+      <label for="dict">My words</label>
+      <textarea id="dict" rows="5" maxlength="5000"></textarea>
+      <p class="hint">One per line: <code>詞=pin yin</code>, for example <code>祢=nǐ</code>. Used for pinyin only.</p>
+    </details>
+  </aside>
+
+  <section class="preview" id="preview" aria-label="Preview">
+    <div id="status" role="status"></div>
+    <p class="hint">Tip: tap a pinyin line to correct it. Corrections stay until you reload.</p>
+    <div id="pages"></div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.29.5/dist/index.js" integrity="sha384-xVOc29fEvSd2kiehn/G68i0AUsGb67RS3xxFcicOrdV+aizdO11IQHvq0VEMprf/" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/opencc-js@1.4.2/dist/umd/t2cn.js" integrity="sha384-IugpbZh+VOI7q1jpBvi6c8LInvRkG/8ejRGi86/0krPeP0twlulCOqtKYBzt97MX" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
+<script src="./lyrics.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var ZH_FONT = '"Noto Serif TC","Noto Serif SC","Songti TC","Songti SC",serif';
+  var PY_FONT = '"Times New Roman",Times,"Noto Serif",serif';
+  var PAPER = { a4: { w: 793.7, h: 1122.5 }, letter: { w: 816, h: 1056 } };
+  var SETTINGS_KEY = 'wl.settings';
+  var FONT_LOADS = [
+    '400 100px "Noto Serif TC"', '700 100px "Noto Serif TC"',
+    '400 100px "Noto Serif SC"', '700 100px "Noto Serif SC"',
+    '400 100px "Noto Serif"', '700 100px "Noto Serif"'
+  ];
+
+  var edits = new Map();        // Chinese cell text -> corrected pinyin (lost on reload)
+  var titlePyTouched = false;
+  var dictWarn = '';
+  var dirty = false;
+  var timer = null;
+  var deps = null;
+
+  function $(id) { return document.getElementById(id); }
+  function mmToPx(mm) { return mm * 96 / 25.4; }
+  function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
+  function timeout(ms, v) { return new Promise(function (r) { setTimeout(function () { r(v); }, ms); }); }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function setStatus(msg, isErr) {
+    var s = $('status');
+    s.textContent = msg;
+    s.classList.toggle('err', !!isErr);
+  }
+  function numOr(id, def) {
+    var v = parseFloat($(id).value);
+    return Number.isFinite(v) ? v : def;
+  }
+  function paperKey() { return $('paper').value === 'letter' ? 'letter' : 'a4'; }
+
+  // ---- library guards ----
+  var missing = [];
+  if (!window.Lyrics || typeof window.Lyrics.parse !== 'function') missing.push('lyrics.js');
+  if (!window.pinyinPro || typeof window.pinyinPro.pinyin !== 'function') missing.push('pinyin-pro');
+  if (!window.OpenCC || typeof window.OpenCC.Converter !== 'function') missing.push('opencc-js');
+  var depsReady = missing.length === 0;
+
+  function getDeps() {
+    if (!deps) {
+      deps = {
+        pinyin: pinyinPro.pinyin,
+        customPinyin: pinyinPro.customPinyin,
+        clearCustomDict: pinyinPro.clearCustomDict,
+        t2s: OpenCC.Converter({ from: 'tw', to: 'cn' })
+      };
+    }
+    return deps;
+  }
+  // Builds deps and loads the user's dictionary; dictionary errors are shown, not fatal.
+  function prepare() {
+    var d = getDeps();
+    dictWarn = '';
+    try { Lyrics.applyDict($('dict').value, d); }
+    catch (e) { dictWarn = 'Dictionary: ' + (e && e.message ? e.message : e); }
+    return d;
+  }
+
+  // ---- measurement ----
+  var mctx = document.createElement('canvas').getContext('2d');
+  function textW(text, font) {
+    mctx.font = '100px ' + font;
+    return mctx.measureText(text).width / 100;
+  }
+
+  // ---- settings (localStorage; lyrics and title are never stored) ----
+  function readSettings() {
+    try {
+      var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+      return (s && typeof s === 'object') ? s : {};
+    } catch (e) { return {}; }
+  }
+  function writeSettings() {
+    var s = {
+      paper: paperKey(),
+      marginMm: numOr('margin', 22),
+      maxPx: numOr('maxPx', 40),
+      minPx: numOr('minPx', 12),
+      ratio: numOr('ratio', 1),
+      autoSplit: $('autoSplit').checked,
+      dict: $('dict').value
+    };
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
+    catch (e) { /* storage blocked: settings simply do not persist */ }
+  }
+  function loadSettings() {
+    var s = readSettings();
+    if (s.paper === 'a4' || s.paper === 'letter') $('paper').value = s.paper;
+    if (typeof s.marginMm === 'number') $('margin').value = s.marginMm;
+    if (typeof s.maxPx === 'number') $('maxPx').value = s.maxPx;
+    if (typeof s.minPx === 'number') $('minPx').value = s.minPx;
+    if (typeof s.ratio === 'number') $('ratio').value = s.ratio;
+    if (typeof s.autoSplit === 'boolean') $('autoSplit').checked = s.autoSplit;
+    $('dict').value = typeof s.dict === 'string' ? s.dict : ((window.Lyrics && Lyrics.DEFAULT_DICT) || '');
+  }
+
+  // ---- title pinyin (auto until the user edits it) ----
+  function autoTitlePy() {
+    if (titlePyTouched || !depsReady) return;
+    try {
+      var d = prepare();
+      var t = $('title').value.trim();
+      $('titlePy').value = t ? Lyrics.cellPinyin(t, d) : '';
+    } catch (e) {
+      setStatus('Could not make title pinyin: ' + (e && e.message ? e.message : e), true);
+    }
+  }
+
+  // ---- parsing helper: group parsed items into label blocks ----
+  function toBlocks(items) {
+    var out = [];
+    var cur = { label: null, rows: [] };
+    var gap = false;
+    items.forEach(function (it) {
+      if (it.type === 'label') {
+        if (cur.label || cur.rows.length) out.push(cur);
+        cur = { label: it.text, rows: [] };
+        gap = false;
+      } else if (it.type === 'gap') {
+        gap = true;
+      } else if (it.type === 'row') {
+        cur.rows.push({ cells: it.cells, gap: gap });
+        gap = false;
+      }
+    });
+    if (cur.label || cur.rows.length) out.push(cur);
+    return out;
+  }
+
+  // ---- scale the paper preview to the available width (CSS only) ----
+  function applyScale() {
+    var P = PAPER[paperKey()];
+    var avail = $('preview').clientWidth || P.w;
+    $('pages').style.setProperty('--s', String(Math.min(1, avail / P.w)));
+  }
+
+  function scheduleRender() {
+    clearTimeout(timer);
+    timer = setTimeout(render, 300);
+  }
+
+  // ---- render ----
+  // Google CJK fonts arrive in unicode-range pieces: load the pieces this text needs, then measure.
+  var renderSeq = 0;
+  function render() {
+    if (!depsReady) return;
+    var seq = ++renderSeq;
+    var text = $('title').value + $('titlePy').value + $('lyrics').value;
+    var loads = [];
+    try {
+      if (document.fonts && document.fonts.load && text.trim()) {
+        ['400', '700'].forEach(function (w) {
+          ['"Noto Serif TC"', '"Noto Serif SC"', '"Noto Serif"'].forEach(function (f) {
+            loads.push(document.fonts.load(w + ' 100px ' + f, text).catch(function () {}));
+          });
+        });
+      }
+    } catch (e) { /* measure with whatever fonts are present */ }
+    Promise.all(loads).then(function () { if (seq === renderSeq) renderNow(); });
+  }
+  function renderNow() {
+    var d, items;
+    try {
+      d = prepare();
+      items = Lyrics.parse($('lyrics').value, { autoSplit: $('autoSplit').checked });
+    } catch (e) {
+      setStatus('Could not render: ' + (e && e.message ? e.message : e), true);
+      return;
+    }
+
+    var P = PAPER[paperKey()];
+    var marginMm = clamp(numOr('margin', 22), 5, 40);
+    var topMm = Math.max(25, marginMm);
+    var maxPx = clamp(numOr('maxPx', 40), 6, 200);
+    var minPx = clamp(numOr('minPx', 12), 6, maxPx);
+    var ratio = clamp(numOr('ratio', 1), 0.5, 1.5);
+    var contentW = P.w - 2 * mmToPx(marginMm);
+    var contentH = P.h - mmToPx(topMm) - mmToPx(marginMm);
+
+    var title = $('title').value.trim();
+    var titlePy = $('titlePy').value.trim();
+    var blocks = toBlocks(items);
+
+    // No columns: each phrase (split at spaces and after ，；、) has its pinyin under it;
+    // the next phrase starts PHRASE_GAP em after the longer of the two.
+    var PHRASE_GAP = 1.0;
+    function phrasesOf(line) {
+      return line.replace(/[，；、,;]/g, '$& ').split(/\s+/).filter(Boolean);
+    }
+    function rowPhrases(r) { return phrasesOf(r.cells.join(' ')); }
+    var pyCache = new Map();
+    function pyOf(cell) {
+      if (edits.has(cell)) return edits.get(cell);
+      if (!pyCache.has(cell)) pyCache.set(cell, Lyrics.cellPinyin(cell, d));
+      return pyCache.get(cell);
+    }
+    function phraseW(x) { return Math.max(textW(x, ZH_FONT), ratio * textW(pyOf(x), PY_FONT)); }
+    var maxRowW = 0;
+    blocks.forEach(function (b) {
+      b.rows.forEach(function (r) {
+        var ph = rowPhrases(r);
+        var w = ph.reduce(function (sum, x) { return sum + phraseW(x); }, 0) + PHRASE_GAP * Math.max(0, ph.length - 1);
+        maxRowW = Math.max(maxRowW, w);
+      });
+    });
+    var size = Lyrics.fitSize({ colWidths: [maxRowW || 1], gapEm: 0, contentWidth: contentW, minPx: minPx, maxPx: maxPx });
+    var tooWide = size * maxRowW > contentW + 0.5;
+
+    // ---- DOM for pages ----
+    var root = $('pages');
+    root.textContent = '';
+    root.style.setProperty('--pw', P.w + 'px');
+    root.style.setProperty('--ph', P.h + 'px');
+    applyScale();
+
+    var pageCount = 0;
+    var cc = null; // content element of the current page
+    function fits() { return cc.offsetHeight <= contentH + 0.5; }
+    function newPage() {
+      if (pageCount >= 200) throw new Error('more than 200 pages; shorten the lyrics');
+      var wrap = el('div', 'pwrap');
+      var pg = el('div', 'page');
+      pg.style.padding = topMm + 'mm ' + marginMm + 'mm ' + marginMm + 'mm';
+      cc = el('div', 'content');
+      cc.style.fontSize = size.toFixed(2) + 'px';
+      cc.style.setProperty('--ratio', String(ratio));
+      pg.appendChild(cc);
+      wrap.appendChild(pg);
+      root.appendChild(wrap);
+      pageCount++;
+    }
+    function hasBlocks() { return cc.querySelector('.block') !== null; }
+
+    function makeRow(r) {
+      var row = el('div', 'row' + (r.gap ? ' gap' : ''));
+      row.style.columnGap = PHRASE_GAP + 'em';
+      rowPhrases(r).forEach(function (x) {
+        var phrase = el('div', 'phrase');
+        phrase.appendChild(el('div', 'zh', x));
+        var py = el('div', 'py', pyOf(x));
+        py.setAttribute('contenteditable', 'true');
+        py.spellcheck = false;
+        py.title = 'Tap to correct the pinyin';
+        py.addEventListener('input', function () {
+          dirty = true;
+          var v = py.textContent.trim();
+          if (v) edits.set(x, v); else edits.delete(x);
+        });
+        py.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') { e.preventDefault(); py.blur(); }
+        });
+        py.addEventListener('blur', function () {
+          if (dirty) { dirty = false; scheduleRender(); }
+        });
+        phrase.appendChild(py);
+        row.appendChild(phrase);
+      });
+      return row;
+    }
+    function makeBlock(label, rows) {
+      var b = el('div', 'block');
+      if (label) b.appendChild(el('div', 'label', label));
+      rows.forEach(function (r) { b.appendChild(makeRow(r)); });
+      return b;
+    }
+
+    // Place one label block: whole on the current page, else whole on a new page,
+    // else split between rows (a pinyin line is never split from its Chinese line).
+    function addBlock(b) {
+      var whole = makeBlock(b.label, b.rows);
+      cc.appendChild(whole);
+      if (fits()) return;
+      whole.remove();
+      if (hasBlocks()) {
+        newPage();
+        cc.appendChild(whole);
+        if (fits()) return;
+        whole.remove();
+      }
+      if (!b.rows.length) { cc.appendChild(whole); return; }
+
+      var i = 0;
+      var label = b.label;
+      while (i < b.rows.length) {
+        var chunk = el('div', 'block');
+        if (label) chunk.appendChild(el('div', 'label', label));
+        cc.appendChild(chunk);
+        var added = 0;
+        var overflow = false;
+        while (i < b.rows.length) {
+          var r = makeRow(b.rows[i]);
+          chunk.appendChild(r);
+          var others = Array.prototype.some.call(cc.querySelectorAll('.block'), function (x) { return x !== chunk; });
+          if (!fits() && (added > 0 || others)) {
+            r.remove();
+            overflow = true;
+            break;
+          }
+          // on an empty page a row that still does not fit is kept, so layout always progresses
+          added++;
+          i++;
+        }
+        if (overflow) {
+          if (added === 0) chunk.remove();
+          newPage();
+          if (added > 0) label = null; // continuation chunks carry no label
+        }
+      }
+    }
+
+    try {
+    newPage();
+    if (title || titlePy) {
+      var tEl = el('div', 'title', title ? title + (titlePy ? ' ' : '') : '');
+      if (titlePy) tEl.appendChild(el('span', 'tpy', titlePy));
+      cc.appendChild(tEl);
+    }
+    blocks.forEach(addBlock);
+    } catch (e) { setStatus('Could not lay out: ' + (e && e.message ? e.message : e), true); return; }
+
+    var hasRows = blocks.some(function (b) { return b.rows.length > 0; });
+    var msg = hasRows
+      ? 'Font ' + size.toFixed(1) + ' px · ' + pageCount + ' page' + (pageCount === 1 ? '' : 's')
+      : 'Paste lyrics to see the preview.';
+    if (tooWide) msg += ' · some lines are wider than the page even at the minimum size';
+    if (dictWarn) msg += ' · ' + dictWarn;
+    setStatus(msg, tooWide || !!dictWarn);
+  }
+
+  // ---- saving ----
+  function canPickFolder() { return !!window.showDirectoryPicker && window.top === window; }
+
+  function openDb() {
+    return new Promise(function (resolve, reject) {
+      if (!('indexedDB' in window)) { reject(new Error('no indexedDB')); return; }
+      var req = indexedDB.open('wl', 1);
+      req.onupgradeneeded = function () { req.result.createObjectStore('kv'); };
+      req.onsuccess = function () { resolve(req.result); };
+      req.onerror = function () { reject(req.error); };
+    });
+  }
+  function kvGet(key) {
+    return openDb().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction('kv', 'readonly');
+        var r = tx.objectStore('kv').get(key);
+        r.onsuccess = function () { resolve(r.result || null); };
+        r.onerror = function () { reject(r.error); };
+        tx.oncomplete = function () { db.close(); };
+      });
+    });
+  }
+  function kvSet(key, value) {
+    return openDb().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction('kv', 'readwrite');
+        tx.objectStore('kv').put(value, key);
+        tx.oncomplete = function () { db.close(); resolve(); };
+        tx.onerror = function () { reject(tx.error); };
+      });
+    });
+  }
+
+  // Remembered folder, or ask the user to pick one (forcePick replaces the stored one).
+  async function getDirHandle(forcePick) {
+    if (!forcePick) {
+      try {
+        var saved = await kvGet('dir');
+        if (saved) return saved;
+      } catch (e) { /* no IndexedDB: fall through to the picker */ }
+    }
+    var h = await window.showDirectoryPicker({ mode: 'readwrite' });
+    try { await kvSet('dir', h); } catch (e) { /* not remembered */ }
+    return h;
+  }
+  async function ensurePermission(h) {
+    var opts = { mode: 'readwrite' };
+    if (h.queryPermission && (await h.queryPermission(opts)) === 'granted') return true;
+    if (h.requestPermission) return (await h.requestPermission(opts)) === 'granted';
+    return true;
+  }
+  function showFolder(name) {
+    var row = $('folderRow');
+    row.hidden = !canPickFolder();
+    $('folderLine').textContent = name ? 'Saving to: ' + name : 'No save folder chosen yet.';
+  }
+  async function refreshFolder() {
+    if (!canPickFolder()) return;
+    $('changeFolder').hidden = false;
+    try {
+      var h = await kvGet('dir');
+      showFolder(h ? h.name : '');
+    } catch (e) { showFolder(''); }
+  }
+  async function changeFolder() {
+    try {
+      var h = await getDirHandle(true);
+      showFolder(h.name);
+      setStatus('Folder changed.');
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;
+      setStatus('Could not choose folder: ' + (e && (e.name || e.message) || 'unknown error'), true);
+    }
+  }
+
+  async function saveBlob(blob, filename, dir) {
+    // 1. Claude downloads API, if the host provides it
+    if (window.claude && typeof window.claude.use === 'function') {
+      var dl = null;
+      try { dl = await Promise.race([window.claude.use('downloads'), timeout(3000, null)]); }
+      catch (e) { dl = null; }
+      if (dl) {
+        try {
+          await dl.save({ filename: filename, data: blob });
+          setStatus('Saved ' + filename);
+        } catch (e) {
+          var code = e && (e.code || e.message);
+          if (code === 'declined') setStatus('Not saved.');
+          else setStatus('Save failed: ' + (code || 'unknown error'), true);
+        }
+        return;
+      }
+    }
+
+    // 2. Remembered folder via the File System Access API (top-level page only)
+    if (canPickFolder()) {
+      try {
+        if (!dir) { setStatus('No save folder.', true); return; }
+        var fh = await dir.getFileHandle(filename, { create: true });
+        var w = await fh.createWritable();
+        await w.write(blob);
+        await w.close();
+        showFolder(dir.name);
+        setStatus('Saved ' + filename);
+      } catch (e) {
+        if (e && e.name === 'AbortError') { setStatus('Not saved.'); return; }
+        setStatus('Save failed: ' + (e && (e.name || e.message) || 'unknown error'), true);
+      }
+      return;
+    }
+
+    // 3. Plain download
+    var url = URL.createObjectURL(blob);
+    var a = el('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
+    setStatus('Downloaded ' + filename);
+  }
+
+  // Capture one page at full size (no CSS scale), then restore its styles.
+  async function capturePage(pg) {
+    var wrap = pg.parentElement;
+    var savedPg = pg.getAttribute('style');
+    var savedWrap = wrap.getAttribute('style');
+    pg.style.transform = 'none';
+    wrap.style.width = 'auto';
+    wrap.style.height = 'auto';
+    wrap.style.overflow = 'visible';
+    try {
+      return await html2canvas(pg, { scale: 2, backgroundColor: '#fff', useCORS: true });
+    } finally {
+      if (savedPg === null) pg.removeAttribute('style'); else pg.setAttribute('style', savedPg);
+      if (savedWrap === null) wrap.removeAttribute('style'); else wrap.setAttribute('style', savedWrap);
+    }
+  }
+
+  async function savePdf() {
+    var btn = $('save');
+    if (!depsReady) { setStatus('Lyrics tools did not load. Check your connection and reload.', true); return; }
+    if (!window.html2canvas || !window.jspdf || !window.jspdf.jsPDF) {
+      setStatus('PDF tools did not load (html2canvas / jsPDF). Check your connection and reload.', true);
+      return;
+    }
+    var pageEls = Array.prototype.slice.call(document.querySelectorAll('#pages .page'));
+    if (!pageEls.length) { setStatus('Nothing to save yet.', true); return; }
+
+    // In Chrome/Edge (not inside claude.ai) ask for the folder now: the picker needs a fresh click.
+    var dir = null;
+    var inClaude = !!(window.claude && typeof window.claude.use === 'function');
+    if (!inClaude && canPickFolder()) {
+      try {
+        dir = await getDirHandle(false);
+        if (!(await ensurePermission(dir))) { setStatus('Folder access was not granted.', true); return; }
+      } catch (e) {
+        if (e && e.name === 'AbortError') { setStatus('Not saved.'); return; }
+        setStatus('Could not open the folder: ' + (e && (e.name || e.message) || 'unknown error'), true);
+        return;
+      }
+    }
+    btn.disabled = true;
+    try {
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      var pdf = new window.jspdf.jsPDF({ unit: 'pt', format: paperKey() === 'letter' ? 'letter' : 'a4' });
+      var pw = pdf.internal.pageSize.getWidth();
+      var ph = pdf.internal.pageSize.getHeight();
+      for (var i = 0; i < pageEls.length; i++) {
+        setStatus('Rendering page ' + (i + 1) + ' of ' + pageEls.length + '…');
+        var canvas = await capturePage(pageEls[i]);
+        if (i > 0) pdf.addPage();
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pw, ph);
+      }
+      var blob = pdf.output('blob');
+      var filename = Lyrics.fileName($('title').value.trim(), $('titlePy').value.trim()) || 'lyrics.pdf';
+      await saveBlob(blob, filename, dir);
+    } catch (e) {
+      setStatus('Could not make the PDF: ' + (e && e.message ? e.message : e), true);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ---- startup ----
+  function init() {
+    loadSettings();
+    if (!depsReady) setStatus('Could not load: ' + missing.join(', ') + '. Check your connection and reload.', true);
+
+    $('lyrics').addEventListener('input', scheduleRender);
+    $('title').addEventListener('input', function () { autoTitlePy(); scheduleRender(); });
+    $('titlePy').addEventListener('input', function () { titlePyTouched = true; scheduleRender(); });
+    $('resetPy').addEventListener('click', function () {
+      titlePyTouched = false;
+      autoTitlePy();
+      clearTimeout(timer);
+      render();
+    });
+    $('dict').addEventListener('input', function () { writeSettings(); autoTitlePy(); scheduleRender(); });
+    ['paper', 'margin', 'maxPx', 'minPx', 'ratio', 'autoSplit'].forEach(function (id) {
+      var onSettings = function () { writeSettings(); scheduleRender(); };
+      $(id).addEventListener('input', onSettings);
+      $(id).addEventListener('change', onSettings);
+    });
+    $('save').addEventListener('click', savePdf);
+    $('changeFolder').addEventListener('click', changeFolder);
+    window.addEventListener('resize', applyScale);
+
+    refreshFolder();
+
+    // Measure only after the Chinese fonts are in, then re-render when more fonts load.
+    var loads = [];
+    try {
+      if (document.fonts && document.fonts.load) {
+        FONT_LOADS.forEach(function (f) { loads.push(document.fonts.load(f).catch(function () {})); });
+      }
+    } catch (e) { /* fonts unavailable: fallback fonts are measured */ }
+    Promise.all(loads)
+      .then(function () { return document.fonts ? document.fonts.ready : null; })
+      .catch(function () {})
+      .then(function () {
+        try {
+          if (document.fonts && document.fonts.addEventListener) {
+            document.fonts.addEventListener('loadingdone', scheduleRender);
+          }
+        } catch (e) { /* ignore */ }
+        render();
+      });
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
