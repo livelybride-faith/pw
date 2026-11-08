@@ -19,7 +19,7 @@ Live: https://livelybride-faith.github.io/pw/
   with **Preview ↗** (opens the video on YouTube) and **Use this** (sets it as the link). **Show 3 more** shows the next 3.
 - **Or paste a link** into **YouTube link**: `youtube.com/watch?v=…`, `youtu.be/…`, `/shorts/…`, `/embed/…` and `/live/…` all work.
   Use ✕ to remove it.
-- With a link set, every printed page has a QR code and the link at the bottom, and the title in the PDF is clickable.
+- With a link set, the link is printed in small type on a line just under the title; in the PDF both the title and the link are clickable.
 
 Without an API key, **Find on YouTube** opens YouTube's own search in a new tab; copy a video link from there and paste it.
 
@@ -36,7 +36,7 @@ The free quota is about 100 searches a day. Each search and each **Show 3 more**
 
 Search results come from YouTube API Services. By using search you agree to the
 [YouTube Terms of Service](https://www.youtube.com/t/terms) and the [Google Privacy Policy](https://policies.google.com/privacy).
-For a search, the search words and the key go to Google's API; the link and the QR code stay in your browser.
+For a search, the search words and the key go to Google's API; the chosen link stays in your browser.
 Prefer official uploads (artist, label or church channels). The page only links to videos; it never downloads them.
 
 ## Privacy

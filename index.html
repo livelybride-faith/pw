@@ -158,17 +158,8 @@ details summary { cursor: pointer; font-weight: 600; }
 }
 .py:focus { outline: 1px dashed var(--accent); outline-offset: 2px; }
 .title.linked { color: #000; text-decoration: none; }
-.ytfoot {
-  position: absolute;
-  height: 20mm;
-  display: flex;
-  align-items: center;
-  gap: 4mm;
-  color: #000;
-  font-family: "Times New Roman", Times, "Noto Serif", serif;
-}
-.yt-qr { width: 20mm; height: 20mm; display: block; image-rendering: pixelated; }
-.yt-link { font-size: 11pt; white-space: nowrap; }
+.yt-link { display: block; width: max-content; font-size: 0.45em; font-weight: 400; margin-top: 0.3em; white-space: nowrap; color: #1a0dab; text-decoration: underline;
+  font-family: "Times New Roman", Times, "Noto Serif", serif; }
 
 /* YouTube section (controls panel) */
 .yt-h { font-size: 15px; margin: 18px 0 0; }
@@ -262,7 +253,6 @@ details summary { cursor: pointer; font-weight: 600; }
 <script src="https://cdn.jsdelivr.net/npm/opencc-js@1.4.2/dist/umd/t2cn.js" integrity="sha384-IugpbZh+VOI7q1jpBvi6c8LInvRkG/8ejRGi86/0krPeP0twlulCOqtKYBzt97MX" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" integrity="sha384-mZT2gIty7ZDdOGkxfP6joZcYdMW1Jvj9dRlfpTmaJAKKXTqzygtB22k7FLe+KZC1" crossorigin="anonymous"></script>
 <script src="./lyrics.js"></script>
 <script>
 (function () {
@@ -436,12 +426,11 @@ details summary { cursor: pointer; font-weight: 600; }
     Promise.all(loads).then(function () { if (seq === renderSeq) renderNow(); });
   }
   function renderNow() {
-    var d, items, ytUrl = null, qrUrl = '';
+    var d, items, ytUrl = null;
     try {
       d = prepare();
       items = Lyrics.parse($('lyrics').value, { autoSplit: $('autoSplit').checked });
       ytUrl = normalizeYouTube($('ytLink').value);
-      if (ytUrl) qrUrl = makeQr(ytUrl);
     } catch (e) {
       setStatus('Could not render: ' + (e && e.message ? e.message : e), true);
       return;
@@ -454,9 +443,7 @@ details summary { cursor: pointer; font-weight: 600; }
     var minPx = clamp(numOr('minPx', 12), 6, maxPx);
     var ratio = clamp(numOr('ratio', 1), 0.5, 1.5);
     var contentW = P.w - 2 * mmToPx(marginMm);
-    // With a YouTube link, every page keeps a 24 mm footer (QR + link) free at the bottom.
-    var footMm = ytUrl ? 24 : 0;
-    var contentH = P.h - mmToPx(topMm) - mmToPx(marginMm) - mmToPx(footMm);
+    var contentH = P.h - mmToPx(topMm) - mmToPx(marginMm);
 
     var title = $('title').value.trim();
     var titlePy = $('titlePy').value.trim();
@@ -497,17 +484,6 @@ details summary { cursor: pointer; font-weight: 600; }
     var pageCount = 0;
     var cc = null; // content element of the current page
     function fits() { return cc.offsetHeight <= contentH + 0.5; }
-    function makeFooter() {
-      var f = el('div', 'ytfoot');
-      f.style.left = marginMm + 'mm';
-      f.style.bottom = marginMm + 'mm';
-      var img = el('img', 'yt-qr');
-      img.src = qrUrl;
-      img.alt = 'QR code for the video link';
-      f.appendChild(img);
-      f.appendChild(el('div', 'yt-link', ytUrl));
-      return f;
-    }
     function newPage() {
       if (pageCount >= 200) throw new Error('more than 200 pages; shorten the lyrics');
       var wrap = el('div', 'pwrap');
@@ -517,7 +493,6 @@ details summary { cursor: pointer; font-weight: 600; }
       cc.style.fontSize = size.toFixed(2) + 'px';
       cc.style.setProperty('--ratio', String(ratio));
       pg.appendChild(cc);
-      if (ytUrl) pg.appendChild(makeFooter());
       wrap.appendChild(pg);
       root.appendChild(wrap);
       pageCount++;
@@ -606,6 +581,7 @@ details summary { cursor: pointer; font-weight: 600; }
     if (title || titlePy) {
       var tEl = el('div', ytUrl ? 'title linked' : 'title', title ? title + (titlePy ? ' ' : '') : '');
       if (titlePy) tEl.appendChild(el('span', 'tpy', titlePy));
+      if (ytUrl) tEl.appendChild(el('span', 'yt-link', ytUrl)); // small, clickable in the PDF
       cc.appendChild(tEl);
     }
     blocks.forEach(addBlock);
@@ -746,14 +722,14 @@ details summary { cursor: pointer; font-weight: 600; }
     setStatus('Downloaded ' + filename);
   }
 
-  // Link areas on one page (CSS px, relative to the page): title (page 1), footer QR and footer link text.
+  // Link areas on one page (CSS px, relative to the page): the title and the small link after it (page 1).
   function pageLinks(pg) {
     var out = [];
     var linkEl = pg.querySelector('.yt-link');
     if (!linkEl) return out;
     var url = linkEl.textContent;
     var base = pg.getBoundingClientRect();
-    [pg.querySelector('.title.linked'), pg.querySelector('.yt-qr'), linkEl].forEach(function (node) {
+    [pg.querySelector('.title.linked'), linkEl].forEach(function (node) {
       if (!node) return;
       var r = node.getBoundingClientRect();
       out.push({ x: r.left - base.left, y: r.top - base.top, w: r.width, h: r.height, url: url });
@@ -828,7 +804,7 @@ details summary { cursor: pointer; font-weight: 600; }
     }
   }
 
-  // ---- YouTube: link rules, search, footer QR ----
+  // ---- YouTube: link rules and search ----
   var YT_KEY = 'wl.ytkey';
   var YT_ID = /^[A-Za-z0-9_-]{11}$/;
   var ytNextToken = '';   // in memory only: token and query for "Show 3 more"
@@ -859,13 +835,6 @@ details summary { cursor: pointer; font-weight: 600; }
       else if ((m = /^\/(shorts|embed|live)\/([^\/]+)$/.exec(u.pathname))) id = m[2];
     }
     return (id && YT_ID.test(id)) ? 'https://youtu.be/' + id : null;
-  }
-  function makeQr(url) {
-    if (typeof window.qrcode !== 'function') throw new Error('QR code tool did not load');
-    var qr = window.qrcode(0, 'M');
-    qr.addData(url);
-    qr.make();
-    return qr.createDataURL(4, 0);
   }
   // YouTube escapes titles as HTML entities; decode them without running any markup.
   function decodeText(s) {
