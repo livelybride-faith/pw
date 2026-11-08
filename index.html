@@ -80,7 +80,7 @@ body {
 label { display: block; font-weight: 600; margin: 10px 0 4px; }
 label.check { display: flex; gap: 6px; align-items: center; font-weight: 400; }
 .hint { color: var(--muted); font-size: 13px; margin: 4px 0 0; }
-input[type="text"], input[type="number"], select, textarea {
+input[type="text"], input[type="password"], input[type="number"], select, textarea {
   width: 100%;
   font: inherit;
   background: var(--field);
@@ -157,6 +157,34 @@ details summary { cursor: pointer; font-weight: 600; }
   cursor: text;
 }
 .py:focus { outline: 1px dashed var(--accent); outline-offset: 2px; }
+.title.linked { color: #000; text-decoration: none; }
+.ytfoot {
+  position: absolute;
+  height: 20mm;
+  display: flex;
+  align-items: center;
+  gap: 4mm;
+  color: #000;
+  font-family: "Times New Roman", Times, "Noto Serif", serif;
+}
+.yt-qr { width: 20mm; height: 20mm; display: block; image-rendering: pixelated; }
+.yt-link { font-size: 11pt; white-space: nowrap; }
+
+/* YouTube section (controls panel) */
+.yt-h { font-size: 15px; margin: 18px 0 0; }
+.yt-btns { margin-top: 6px; }
+.yt-btns #ytFind { flex: 1; }
+.yt-results { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 8px; }
+.yt-card { display: flex; gap: 8px; padding: 6px; border: 1px solid var(--border); border-radius: 6px; }
+.yt-card.selected { border-color: var(--accent); }
+.yt-thumb { width: 96px; height: auto; flex: none; border-radius: 4px; }
+.yt-info { min-width: 0; flex: 1; }
+.yt-title { font-weight: 600; overflow-wrap: anywhere; }
+.yt-channel { color: var(--muted); font-size: 13px; }
+.yt-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 4px; font-size: 13px; }
+.yt-actions button { padding: 4px 8px; }
+.yt-sel { display: none; color: var(--accent); font-weight: 600; }
+.yt-card.selected .yt-sel { display: inline; }
 </style>
 </head>
 <body>
@@ -173,7 +201,24 @@ details summary { cursor: pointer; font-weight: 600; }
 
     <label for="lyrics">Lyrics</label>
     <textarea id="lyrics" class="lyrics" rows="12" maxlength="20000" placeholder="[主歌]&#10;我們 一起走 在路上&#10;長大以後  去銀行&#10;&#10;[副歌]&#10;祢的愛  永遠長存"></textarea>
-    <p class="hint">One line per lyric line. Use a tab, <code>|</code> or 2+ spaces between cells. <code>[Verse]</code>, <code>[Chorus]</code> and similar start a section. Lines that already have pinyin are skipped.</p>
+    <p class="hint">One line per lyric line. Spaces and commas split a line into phrases; each gets its own pinyin. <code>1、</code>, <code>[Verse]</code>, <code>[Chorus]</code> and similar start a section. Lines that already have pinyin are skipped.</p>
+
+    <section class="yt" aria-labelledby="ytHead">
+      <h3 class="yt-h" id="ytHead">YouTube</h3>
+      <label for="ytQuery">Search words</label>
+      <input type="text" id="ytQuery" maxlength="200" autocomplete="off">
+      <div class="inline yt-btns">
+        <button type="button" id="ytFind">Find on YouTube</button>
+        <button type="button" class="secondary" id="ytMore" hidden>Show 3 more</button>
+      </div>
+      <ul class="yt-results" id="ytResults" hidden></ul>
+      <label for="ytLink">YouTube link</label>
+      <div class="inline">
+        <input type="text" id="ytLink" maxlength="200" autocomplete="off" placeholder="https://youtu.be/...">
+        <button type="button" class="secondary" id="ytClear" title="Clear YouTube link" aria-label="Clear YouTube link">✕</button>
+      </div>
+      <p class="hint">Search uses YouTube API Services: <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener noreferrer">YouTube Terms of Service</a>, <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google Privacy Policy</a>.</p>
+    </section>
 
     <div class="save">
       <button type="button" id="save">Save PDF</button>
@@ -200,6 +245,9 @@ details summary { cursor: pointer; font-weight: 600; }
       <label for="dict">My words</label>
       <textarea id="dict" rows="5" maxlength="5000"></textarea>
       <p class="hint">One per line: <code>詞=pin yin</code>, for example <code>祢=nǐ</code>. Used for pinyin only.</p>
+      <label for="ytKey">YouTube API key</label>
+      <input type="password" id="ytKey" autocomplete="off">
+      <p class="hint">Saved only in this browser. See README for how to get a free key.</p>
     </details>
   </aside>
 
@@ -214,6 +262,7 @@ details summary { cursor: pointer; font-weight: 600; }
 <script src="https://cdn.jsdelivr.net/npm/opencc-js@1.4.2/dist/umd/t2cn.js" integrity="sha384-IugpbZh+VOI7q1jpBvi6c8LInvRkG/8ejRGi86/0krPeP0twlulCOqtKYBzt97MX" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" integrity="sha384-mZT2gIty7ZDdOGkxfP6joZcYdMW1Jvj9dRlfpTmaJAKKXTqzygtB22k7FLe+KZC1" crossorigin="anonymous"></script>
 <script src="./lyrics.js"></script>
 <script>
 (function () {
@@ -387,10 +436,12 @@ details summary { cursor: pointer; font-weight: 600; }
     Promise.all(loads).then(function () { if (seq === renderSeq) renderNow(); });
   }
   function renderNow() {
-    var d, items;
+    var d, items, ytUrl = null, qrUrl = '';
     try {
       d = prepare();
       items = Lyrics.parse($('lyrics').value, { autoSplit: $('autoSplit').checked });
+      ytUrl = normalizeYouTube($('ytLink').value);
+      if (ytUrl) qrUrl = makeQr(ytUrl);
     } catch (e) {
       setStatus('Could not render: ' + (e && e.message ? e.message : e), true);
       return;
@@ -403,7 +454,9 @@ details summary { cursor: pointer; font-weight: 600; }
     var minPx = clamp(numOr('minPx', 12), 6, maxPx);
     var ratio = clamp(numOr('ratio', 1), 0.5, 1.5);
     var contentW = P.w - 2 * mmToPx(marginMm);
-    var contentH = P.h - mmToPx(topMm) - mmToPx(marginMm);
+    // With a YouTube link, every page keeps a 24 mm footer (QR + link) free at the bottom.
+    var footMm = ytUrl ? 24 : 0;
+    var contentH = P.h - mmToPx(topMm) - mmToPx(marginMm) - mmToPx(footMm);
 
     var title = $('title').value.trim();
     var titlePy = $('titlePy').value.trim();
@@ -444,6 +497,17 @@ details summary { cursor: pointer; font-weight: 600; }
     var pageCount = 0;
     var cc = null; // content element of the current page
     function fits() { return cc.offsetHeight <= contentH + 0.5; }
+    function makeFooter() {
+      var f = el('div', 'ytfoot');
+      f.style.left = marginMm + 'mm';
+      f.style.bottom = marginMm + 'mm';
+      var img = el('img', 'yt-qr');
+      img.src = qrUrl;
+      img.alt = 'QR code for the video link';
+      f.appendChild(img);
+      f.appendChild(el('div', 'yt-link', ytUrl));
+      return f;
+    }
     function newPage() {
       if (pageCount >= 200) throw new Error('more than 200 pages; shorten the lyrics');
       var wrap = el('div', 'pwrap');
@@ -453,6 +517,7 @@ details summary { cursor: pointer; font-weight: 600; }
       cc.style.fontSize = size.toFixed(2) + 'px';
       cc.style.setProperty('--ratio', String(ratio));
       pg.appendChild(cc);
+      if (ytUrl) pg.appendChild(makeFooter());
       wrap.appendChild(pg);
       root.appendChild(wrap);
       pageCount++;
@@ -539,7 +604,7 @@ details summary { cursor: pointer; font-weight: 600; }
     try {
     newPage();
     if (title || titlePy) {
-      var tEl = el('div', 'title', title ? title + (titlePy ? ' ' : '') : '');
+      var tEl = el('div', ytUrl ? 'title linked' : 'title', title ? title + (titlePy ? ' ' : '') : '');
       if (titlePy) tEl.appendChild(el('span', 'tpy', titlePy));
       cc.appendChild(tEl);
     }
@@ -552,7 +617,9 @@ details summary { cursor: pointer; font-weight: 600; }
       : 'Paste lyrics to see the preview.';
     if (tooWide) msg += ' · some lines are wider than the page even at the minimum size';
     if (dictWarn) msg += ' · ' + dictWarn;
-    setStatus(msg, tooWide || !!dictWarn);
+    var ytBad = !!$('ytLink').value.trim() && !ytUrl;
+    if (ytBad) msg += ' · Not a YouTube link';
+    setStatus(msg, tooWide || !!dictWarn || ytBad);
   }
 
   // ---- saving ----
@@ -679,7 +746,23 @@ details summary { cursor: pointer; font-weight: 600; }
     setStatus('Downloaded ' + filename);
   }
 
+  // Link areas on one page (CSS px, relative to the page): title (page 1), footer QR and footer link text.
+  function pageLinks(pg) {
+    var out = [];
+    var linkEl = pg.querySelector('.yt-link');
+    if (!linkEl) return out;
+    var url = linkEl.textContent;
+    var base = pg.getBoundingClientRect();
+    [pg.querySelector('.title.linked'), pg.querySelector('.yt-qr'), linkEl].forEach(function (node) {
+      if (!node) return;
+      var r = node.getBoundingClientRect();
+      out.push({ x: r.left - base.left, y: r.top - base.top, w: r.width, h: r.height, url: url });
+    });
+    return out;
+  }
+
   // Capture one page at full size (no CSS scale), then restore its styles.
+  // Returns { canvas, rects }; rects are measured while the page is unscaled.
   async function capturePage(pg) {
     var wrap = pg.parentElement;
     var savedPg = pg.getAttribute('style');
@@ -689,7 +772,9 @@ details summary { cursor: pointer; font-weight: 600; }
     wrap.style.height = 'auto';
     wrap.style.overflow = 'visible';
     try {
-      return await html2canvas(pg, { scale: 2, backgroundColor: '#fff', useCORS: true });
+      var rects = pageLinks(pg);
+      var canvas = await html2canvas(pg, { scale: 2, backgroundColor: '#fff', useCORS: true });
+      return { canvas: canvas, rects: rects };
     } finally {
       if (savedPg === null) pg.removeAttribute('style'); else pg.setAttribute('style', savedPg);
       if (savedWrap === null) wrap.removeAttribute('style'); else wrap.setAttribute('style', savedWrap);
@@ -727,9 +812,11 @@ details summary { cursor: pointer; font-weight: 600; }
       var ph = pdf.internal.pageSize.getHeight();
       for (var i = 0; i < pageEls.length; i++) {
         setStatus('Rendering page ' + (i + 1) + ' of ' + pageEls.length + '…');
-        var canvas = await capturePage(pageEls[i]);
+        var cap = await capturePage(pageEls[i]);
         if (i > 0) pdf.addPage();
-        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pw, ph);
+        pdf.addImage(cap.canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pw, ph);
+        var k = pw / pageEls[i].offsetWidth;
+        cap.rects.forEach(function (r) { pdf.link(r.x * k, r.y * k, r.w * k, r.h * k, { url: r.url }); });
       }
       var blob = pdf.output('blob');
       var filename = Lyrics.fileName($('title').value.trim(), $('titlePy').value.trim()) || 'lyrics.pdf';
@@ -741,13 +828,160 @@ details summary { cursor: pointer; font-weight: 600; }
     }
   }
 
+  // ---- YouTube: link rules, search, footer QR ----
+  var YT_KEY = 'wl.ytkey';
+  var YT_ID = /^[A-Za-z0-9_-]{11}$/;
+  var ytNextToken = '';   // in memory only: token and query for "Show 3 more"
+  var ytLastQuery = '';
+  var ytQueryTouched = false;
+
+  function readYtKey() {
+    try { return localStorage.getItem(YT_KEY) || ''; } catch (e) { return ''; }
+  }
+  function writeYtKey(v) {
+    try { if (v) localStorage.setItem(YT_KEY, v); else localStorage.removeItem(YT_KEY); }
+    catch (e) { /* storage blocked: the key must be typed again next time */ }
+  }
+  // Returns https://youtu.be/ID for a YouTube video link, otherwise null.
+  function normalizeYouTube(s) {
+    var str = String(s || '').trim();
+    if (!str) return null;
+    var u;
+    try { u = new URL(str); } catch (e) { return null; }
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
+    var host = u.hostname.toLowerCase();
+    var id = null;
+    var m;
+    if (host === 'youtu.be') {
+      id = u.pathname.slice(1);
+    } else if (host === 'youtube.com' || host === 'www.youtube.com' || host === 'm.youtube.com' || host === 'music.youtube.com') {
+      if (u.pathname === '/watch') id = u.searchParams.get('v');
+      else if ((m = /^\/(shorts|embed|live)\/([^\/]+)$/.exec(u.pathname))) id = m[2];
+    }
+    return (id && YT_ID.test(id)) ? 'https://youtu.be/' + id : null;
+  }
+  function makeQr(url) {
+    if (typeof window.qrcode !== 'function') throw new Error('QR code tool did not load');
+    var qr = window.qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    return qr.createDataURL(4, 0);
+  }
+  // YouTube escapes titles as HTML entities; decode them without running any markup.
+  function decodeText(s) {
+    return new DOMParser().parseFromString(String(s || ''), 'text/html').documentElement.textContent || '';
+  }
+  function prefillYtQuery() {
+    if (!ytQueryTouched) $('ytQuery').value = $('title').value.trim();
+  }
+  function markSelected() {
+    var cur = normalizeYouTube($('ytLink').value);
+    Array.prototype.forEach.call($('ytResults').children, function (li) {
+      li.classList.toggle('selected', !!cur && cur === 'https://youtu.be/' + li.getAttribute('data-vid'));
+    });
+  }
+  function renderResults(cards) {
+    var list = $('ytResults');
+    list.textContent = '';
+    cards.forEach(function (it) {
+      var id = it.id.videoId;
+      var sn = it.snippet || {};
+      var li = el('li', 'yt-card');
+      li.setAttribute('data-vid', id);
+      var thumb = sn.thumbnails && sn.thumbnails.default && sn.thumbnails.default.url;
+      if (typeof thumb === 'string' && thumb.indexOf('https://i.ytimg.com/') === 0) {
+        var img = el('img', 'yt-thumb');
+        img.alt = '';
+        img.src = thumb;
+        li.appendChild(img);
+      }
+      var info = el('div', 'yt-info');
+      info.appendChild(el('div', 'yt-title', decodeText(sn.title)));
+      info.appendChild(el('div', 'yt-channel', decodeText(sn.channelTitle)));
+      var actions = el('div', 'yt-actions');
+      var prev = el('a', null, 'Preview ↗');
+      prev.href = 'https://www.youtube.com/watch?v=' + id;
+      prev.target = '_blank';
+      prev.rel = 'noopener noreferrer';
+      var use = el('button', 'secondary', 'Use this');
+      use.type = 'button';
+      use.addEventListener('click', function () {
+        $('ytLink').value = 'https://youtu.be/' + id;
+        markSelected();
+        scheduleRender();
+      });
+      actions.appendChild(prev);
+      actions.appendChild(use);
+      actions.appendChild(el('span', 'yt-sel', '✓ Selected'));
+      info.appendChild(actions);
+      li.appendChild(info);
+      list.appendChild(li);
+    });
+    list.hidden = !cards.length;
+    markSelected();
+  }
+  async function ytHttpError(res) {
+    var reason = '';
+    try { reason = (await res.json()).error.errors[0].reason; } catch (e) { reason = ''; }
+    if (res.status === 403 && reason === 'quotaExceeded') return 'Daily YouTube search limit reached. Try tomorrow or paste a link.';
+    if (res.status === 400 || res.status === 403) return 'YouTube API key not accepted. Check it in Settings.';
+    return 'YouTube search failed (HTTP ' + res.status + ').';
+  }
+  // Find (more = false) replaces the list with the top 3; "Show 3 more" (more = true) replaces it with the next 3.
+  async function ytSearch(more) {
+    var key = $('ytKey').value.trim();
+    var q = more ? ytLastQuery : $('ytQuery').value.trim();
+    if (!q) { setStatus('Type search words first.', true); return; }
+    if (!key) {
+      window.open('https://www.youtube.com/results?search_query=' + encodeURIComponent(q), '_blank', 'noopener');
+      setStatus('Pick a video on YouTube, copy its link, paste it into YouTube link. (Add an API key in Settings to search here.)');
+      return;
+    }
+    var params = new URLSearchParams({ part: 'snippet', type: 'video', maxResults: '3', q: q, key: key });
+    if (more && ytNextToken) params.set('pageToken', ytNextToken);
+    var ctrl = new AbortController();
+    var guard = setTimeout(function () { ctrl.abort(); }, 15000);
+    $('ytFind').disabled = true;
+    $('ytMore').disabled = true;
+    setStatus('Searching YouTube…');
+    var msg = '';
+    var data = null;
+    try {
+      var res = await fetch('https://www.googleapis.com/youtube/v3/search?' + params.toString(), { signal: ctrl.signal });
+      if (res.ok) data = await res.json();
+      else msg = await ytHttpError(res);
+    } catch (e) {
+      msg = 'Could not reach YouTube.';
+    } finally {
+      clearTimeout(guard);
+      $('ytFind').disabled = false;
+      $('ytMore').disabled = false;
+    }
+    if (msg) { setStatus(msg, true); return; }
+    var cards = (data && Array.isArray(data.items) ? data.items : []).filter(function (it) {
+      return it && it.id && typeof it.id.videoId === 'string' && YT_ID.test(it.id.videoId);
+    }).slice(0, 3);
+    ytLastQuery = q;
+    ytNextToken = (data && typeof data.nextPageToken === 'string') ? data.nextPageToken : '';
+    renderResults(cards);
+    $('ytMore').hidden = !ytNextToken || !cards.length;
+    setStatus(cards.length ? 'Pick a video, or paste a link.' : 'No videos found.');
+  }
+
   // ---- startup ----
   function init() {
     loadSettings();
+    $('ytKey').value = readYtKey();
     if (!depsReady) setStatus('Could not load: ' + missing.join(', ') + '. Check your connection and reload.', true);
 
     $('lyrics').addEventListener('input', scheduleRender);
-    $('title').addEventListener('input', function () { autoTitlePy(); scheduleRender(); });
+    $('title').addEventListener('input', function () { autoTitlePy(); prefillYtQuery(); scheduleRender(); });
+    $('ytQuery').addEventListener('input', function () { ytQueryTouched = true; });
+    $('ytFind').addEventListener('click', function () { ytSearch(false); });
+    $('ytMore').addEventListener('click', function () { ytSearch(true); });
+    $('ytLink').addEventListener('input', function () { markSelected(); scheduleRender(); });
+    $('ytClear').addEventListener('click', function () { $('ytLink').value = ''; markSelected(); scheduleRender(); });
+    $('ytKey').addEventListener('input', function () { writeYtKey($('ytKey').value.trim()); });
     $('titlePy').addEventListener('input', function () { titlePyTouched = true; scheduleRender(); });
     $('resetPy').addEventListener('click', function () {
       titlePyTouched = false;
